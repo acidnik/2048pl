@@ -328,8 +328,8 @@ while (1) {
         print "game over: you ".($game->win ? 'made it!' : 'lost')."\n";
         last;
     }
-    $game->auto_play();
-    next;
+    # $game->auto_play();
+    # next;
     my $key = get_key();
     if ($key eq 'w') {
         $game->pull_up();
