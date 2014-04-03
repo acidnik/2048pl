@@ -5,25 +5,6 @@ use Term::ReadKey;
 
 srand();
 
-# pp row_pull_merge_rev([2,0,4,0]);
-# pp row_pull_merge([2,0,4,0]);
-# pp [ merge_row([1,0,0,0]) ];
-# exit;
-
-# 
-# $map->[1][1] = 2;
-# $map->[0][1] = 2;
-# $map->[3][1] = 2;
-# $map->[2][3] = 4;
-# 
-# draw_map($map);
-# # pull_up($map);
-# # draw_map($map);
-# pull_down($map);
-# pull_right($map);
-# draw_map($map);
-# exit();
-
 package The2048;
 
 use Term::ANSIColor qw/colored/;
@@ -55,9 +36,6 @@ sub win
 sub init_map
 {
     my $self = shift;
-    my $c = 2;
-    # $self->{map} = [ map { [ map { 2**(1+int rand(10)) } (0 .. 3) ] } (0 .. 3) ];
-    # $self->{map}->[1][1] = $self->{map}->[1][2] = 1024;
     $self->{map} = [ map { [ map { 0 } (0 .. 3) ] } (0 .. 3) ];
 }
 
