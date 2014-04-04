@@ -3,6 +3,7 @@
 use strict;
 use warnings;
 use utf8;
+use open ':std' => ':utf8';
 
 use Term::ReadKey;
 
@@ -13,16 +14,23 @@ package The2048;
 use Term::ANSIColor qw/colored/;
 use feature 'state';
 use Time::HiRes;
+use List::Util qw/max/;
 
 sub new
 {
     my ($class, $self) = @_;
     $self //= {};
     bless $self, $class;
+    $self->init();
+    return $self;
+}
+
+sub init
+{
+    my $self = shift;
     $self->init_map();
     $self->{over} = $self->{win} = 0;
     $self->put_random();
-    return $self;
 }
 
 sub over
@@ -41,6 +49,7 @@ sub init_map
     $self->{map} = [ map { [ map { 0 } (0 .. 3) ] } (0 .. 3) ];
 }
 
+# up - right - down - left in a loop
 sub auto_play
 {
     my $self = shift;
@@ -48,6 +57,119 @@ sub auto_play
     state $move_idx = 0;
     $self->pull($moves->[ $move_idx = ($move_idx + 1) % 4 ]);
     Time::HiRes::sleep 0.01;
+}
+
+# down - rigth in a loop until stuck, then left-right and again from the top
+sub auto_play2
+{
+    my $self = shift;
+    my $SLEEP = 0.01;
+    $self->{valid_moves} //= 1;
+    $self->{next_move} //= 'down';
+    my %seq = ( down => 'right', right => 'down', left => 'right' );
+    if ($self->{valid_moves}) {
+        $self->pull($self->{next_move});
+        $self->{next_move} = $seq{$self->{next_move}};
+        if ($self->{valid_move}) {
+            $self->{valid_moves}++;
+        }
+        else {
+            $self->{valid_moves}--;
+        }
+    }
+    else {
+        $self->{next_move} = 'left';
+        $self->{valid_moves} = 1;
+    }
+    # $self->{message} = "valid: $self->{valid_move}, next: $self->{next_move}";
+    Time::HiRes::sleep $SLEEP;
+}
+
+# find the move which gives biggest number
+sub auto_play3
+{
+    my $self = shift;
+    my ($max_move, $dir) = (0, undef);
+    for my $i (0 .. 3) {
+        for my $j (0 .. 3) {
+            if ($self->{map}->[$i][$j] > 0) {
+                if ($i < 3
+                    && $self->{map}->[$i][$j] == $self->{map}->[$i+1][$j]
+                )
+                {
+                    my $sum = $self->{map}->[$i][$j] * 2;
+                    if ($sum > $max_move) {
+                        $max_move = $sum;
+                        $dir = ($i == 0 ? 'down' : 'up');
+                    }
+                }
+                if ($j < 3
+                    && $self->{map}->[$i][$j] == $self->{map}->[$i][$j+1]
+                )
+                {
+                    my $sum = $self->{map}->[$i][$j] * 2;
+                    if ($sum > $max_move) {
+                        $max_move = $sum;
+                        $dir = ($j == 0 ? 'right' : 'left');
+                    }
+                }
+            }
+        }
+    }
+    unless ($dir) {
+        $dir = [qw/up down left right/]->[int rand 4];
+    }
+    $self->pull($dir);
+    Time::HiRes::sleep 0.01;
+}
+
+# find move with biggest number of merges
+sub auto_play4
+{
+    my $self = shift;
+    my %moves;
+    # $self->{skip} //= 0;
+    # if ($self->{skip}++ < 150) {
+    #     return $self->auto_play();
+    # }
+
+    for my $i (0 .. 3) {
+        for my $j (0 .. 3) {
+            if ($self->{map}->[$i][$j] > 0) {
+                if ($i < 3
+                    && $self->{map}->[$i][$j] == $self->{map}->[$i+1][$j]
+                )
+                {
+                    my $m = 'up';
+                    if ($i == 0) {
+                        $m = 'down';
+                    }
+                    $moves{$m}{cnt}++;
+                    $moves{$m}{sum} += $self->{map}->[$i][$j];
+                }
+                if ($j < 3
+                    && $self->{map}->[$i][$j] == $self->{map}->[$i][$j+1]
+                )
+                {
+                    my $m = 'right';
+                    if ($j == 0) {
+                        $m = 'left';
+                    }
+                    $moves{$m}{cnt}++;
+                    $moves{$m}{sum} += $self->{map}->[$i][$j];
+                }
+            }
+        }
+    }
+    my $move = ( sort { $moves{$b}->{cnt} <=> $moves{$a}{cnt} || $moves{$b}{sum} <=> $moves{$a}{sum} } keys %moves )[0] // $self->rand_move();
+    # my $move = ( sort { $moves{$b}->{sum} <=> $moves{$a}{sum} || $moves{$b}{cnt} <=> $moves{$a}{cnt} } keys %moves )[0] // $self->rand_move();
+    $self->pull($move);
+    Time::HiRes::sleep 0.01;
+}
+
+sub rand_move
+{
+    return [ qw/up down left right/ ]->[int rand(4)]
 }
 
 sub check_game_over
@@ -233,6 +355,9 @@ sub draw
     └──────┴──────┴──────┴──────┘/;
     print $clear;
     printf $box, map { map { hl(pad($_)) } @$_ } @{$self->{map}};
+    if ($self->{message}) {
+        print "\n$self->{message}";
+    }
     print "\n";
 }
 
@@ -251,8 +376,9 @@ sub pad
 sub hl
 {
     my $s = shift;
-    my $n = int($s =~ s/\D//rg);
+    my $n = int(($s =~ s/\D//rg)||0);
     my %hl = (
+        0 => '',
         2 => 'black bold',
         4 => 'red bold',
         8 => 'green bold',
@@ -265,7 +391,7 @@ sub hl
         1024 => 'yellow bold on_black',
         2048 => 'blue bold on_black',
     );
-    return colored(["$hl{$n}"], $s);
+    return colored(["$hl{$n}"], $s//'');
 }
 
 sub put_random
@@ -300,10 +426,18 @@ while (1) {
     $game->draw();
     if ($game->over) {
         print "game over: you ".($game->win ? 'made it!' : 'lost')."\n";
-        last;
+        print "play again? (Y/n)\n";
+        my $ch = get_key();
+        if ($ch eq 'n') {
+            last;
+        }
+        else {
+            $game->init();
+            next;
+        }
     }
-    # $game->auto_play();
-    # next;
+    $game->auto_play4();
+    next;
     my $key = get_key();
     if ($key eq 'w') {
         $game->pull('up');
