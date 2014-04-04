@@ -291,8 +291,9 @@ sub put_random
 
 package main;
 
-my $game = The2048->new();
+help();
 
+my $game = The2048->new();
 while (1) {
     $game->draw();
     if ($game->over) {
@@ -317,6 +318,9 @@ while (1) {
     elsif ($key eq 'q') {
         last;
     }
+    elsif ($key eq '?') {
+        help();
+    }
 }
 
 sub get_key
@@ -332,6 +336,30 @@ sub get_key
         }
     }
     ReadMode(0);
+    # vim-style controls
+    $ch = { h => 'a', l => 'd', j => 's', k => 'w'  }->{$ch} // $ch;
     return $ch;
+}
+
+sub help
+{
+    print q/
+Controls:
+
+  w
+a s d
+
+  ↑
+← ↓ →
+
+  k
+h j l
+
+q to quit
+? to see this message
+
+Press any key to continue
+/;
+    get_key();
 }
 
