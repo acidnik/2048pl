@@ -42,11 +42,10 @@ sub init_map
 sub auto_play
 {
     my $self = shift;
-    my $moves = [ qw/pull_up pull_right pull_down pull_left/ ];
+    my $moves = [ qw/up right down left/ ];
     state $move_idx = 0;
-    my $move = $moves->[$move_idx = ($move_idx+1)%4];
-    $self->$move();
-    Time::HiRes::sleep 0.05;
+    $self->pull($moves->[ $move_idx = ($move_idx + 1) % 4 ]);
+    Time::HiRes::sleep 0.01;
 }
 
 sub check_game_over
@@ -84,68 +83,62 @@ sub check_game_over
     }
 }
 
+sub pull
+{
+    my ($self, $direction) = @_;
+    $self->{valid_move} = 0;
+    if ($direction eq 'up') {
+        $self->pull_up();
+    }
+    elsif ($direction eq 'down') {
+        $self->pull_down();
+    }
+    elsif ($direction eq 'left') {
+        $self->pull_left();
+    }
+    elsif ($direction eq 'right') {
+        $self->pull_right();
+    }
+    if ($self->{valid_move}) {
+        $self->put_random();
+    }
+    $self->check_game_over();
+}
+
 sub pull_up
 {
     my $self = shift;
     $self->rotate();
-    my $valid_move = 0;
-    for my $i (keys @{$self->{map}}) {
-        my ($new_row, $moved) = row_pull_merge($self->{map}->[$i]);
-        $self->{map}->[$i] = $new_row;
-        $valid_move ||= $moved;
-    }
+    $self->pull_left();
     $self->rotate();
-    if ($valid_move) {
-        $self->put_random();
-    }
-    $self->check_game_over();
 }
 
 sub pull_down
 {
     my $self = shift;
     $self->rotate();
-    my $valid_move = 0;
-    for my $i (keys @{$self->{map}}) {
-        my ($new_row, $moved) = row_pull_merge_rev($self->{map}->[$i]);
-        $self->{map}->[$i] = $new_row;
-        $valid_move ||= $moved;
-    }
+    $self->pull_right();
     $self->rotate();
-    if ($valid_move) {
-        $self->put_random();
-    }
-    $self->check_game_over();
 }
 
 sub pull_left
 {
     my $self = shift;
-    my $valid_move = 0;
     for my $i (keys @{$self->{map}}) {
         my ($new_row, $moved) = row_pull_merge($self->{map}->[$i]);
         $self->{map}->[$i] = $new_row;
-        $valid_move ||= $moved;
+        $self->{valid_move} ||= $moved;
     }
-    if ($valid_move) {
-        $self->put_random();
-    }
-    $self->check_game_over();
 }
 
 sub pull_right
 {
     my $self = shift;
-    my $valid_move = 0;
     for my $i (keys @{$self->{map}}) {
         my ($new_row, $moved) = row_pull_merge_rev($self->{map}->[$i]);
         $self->{map}->[$i] = $new_row;
-        $valid_move ||= $moved;
+        $self->{valid_move} ||= $moved;
     }
-    if ($valid_move) {
-        $self->put_random();
-    }
-    $self->check_game_over();
 }
 
 sub row_pull_merge_rev
@@ -310,16 +303,16 @@ while (1) {
     # next;
     my $key = get_key();
     if ($key eq 'w') {
-        $game->pull_up();
+        $game->pull('up');
     }
     elsif ($key eq 's') {
-        $game->pull_down();
+        $game->pull('down');
     }
     elsif ($key eq 'a') {
-        $game->pull_left();
+        $game->pull('left');
     }
     elsif ($key eq 'd') {
-        $game->pull_right();
+        $game->pull('right');
     }
     elsif ($key eq 'q') {
         last;
