@@ -1,6 +1,9 @@
 #!/usr/bin/perl
 
-use common::sense;
+use strict;
+use warnings;
+use utf8;
+
 use Term::ReadKey;
 
 srand();
@@ -8,7 +11,6 @@ srand();
 package The2048;
 
 use Term::ANSIColor qw/colored/;
-use Data::Dump 'pp';
 use feature 'state';
 use Time::HiRes;
 
