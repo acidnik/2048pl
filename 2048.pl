@@ -1,10 +1,6 @@
 #!/usr/bin/perl
 
-use strict;
-use warnings;
-use utf8;
-use open ':std' => ':utf8';
-
+use common::sense;
 use Term::ReadKey;
 
 srand();
@@ -436,8 +432,8 @@ while (1) {
             next;
         }
     }
-    $game->auto_play4();
-    next;
+    # $game->auto_play4();
+    # next;
     my $key = get_key();
     if ($key eq 'w') {
         $game->pull('up');
